@@ -1,4 +1,4 @@
-/* skd3 version 0.2.0 (https://github.com/fabriciorhs/skd3) 2017-09-20 */
+/* skd3 version 0.2.0 (https://github.com/fabriciorhs/skd3) 2018-07-28 */
 (function(){
 // set up main sk object
 var sk = {};
@@ -341,7 +341,7 @@ if (typeof(window) !== 'undefined') {
   };
 
 }));
-sk.createSankey = function(containerId, configSankey, dataSankey) {
+sk.createSankey = function(containerId, configSankey, dataSankey, selectionCallback) {
 
 	// to prevent NaN value, related https://github.com/d3/d3-sankey/issues/39
 	var _safeValueToLink = function(v) { return Math.max(v, Number.MIN_VALUE); }
@@ -364,6 +364,9 @@ sk.createSankey = function(containerId, configSankey, dataSankey) {
             source: l.source,
             target: l.target,
             id: l.id,
+            color: l.color,
+            defaultColor: l.defaultColor,
+            highlightColor: l.highlightColor,
             value: _safeValueToLink(l.value)
         });
     });
@@ -566,10 +569,17 @@ sk.createSankey = function(containerId, configSankey, dataSankey) {
         .attr("class", "sk-link")
         .attr("d", path)
         .style("stroke", function(l) {
-            return l.source.color;
+            return l.color;
         })
         .style("stroke-width", function(l) {
             return Math.max(1, l.width) + "px";
+        })
+        .on('mouseover', function(l) {
+            console.log(l.id);
+            selectionCallback(l.id);
+        })
+        .on('mouseout', function(l) {
+            selectionCallback(null);
         })
         .sort(function(a, b) {
             return b.width - a.width;
@@ -606,6 +616,39 @@ sk.createSankey = function(containerId, configSankey, dataSankey) {
         .attr("class", "sk-node")
         .attr("transform", function(d) {
             return "translate(" + d.x0 + "," + d.y0 + ")";
+        })
+        .on('mouseover', function(d) {
+            console.log(d);
+            console.log(d.id.toString());
+            selectionCallback(JSON.stringify(d.id));
+            var i;
+            for (i = 0; i < d.sourceLinks.length; i++) {
+                d.sourceLinks[i].color = d.sourceLinks[i].highlightColor;
+            }
+            for (i = 0; i < d.targetLinks.length; i++) {
+                d.targetLinks[i].color = d.targetLinks[i].highlightColor;
+            }
+            d3.selectAll(".sk-link").style("stroke", function(l) {
+                return l.color;
+            })
+            sankey(_dataSankey);
+            sankey.update(_dataSankey);
+        })
+        .on('mouseout', function(d) {
+            console.log(d);
+            selectionCallback(null);
+            var i;
+            for (i = 0; i < d.sourceLinks.length; i++) {
+                d.sourceLinks[i].color = d.sourceLinks[i].defaultColor;
+            }
+            for (i = 0; i < d.targetLinks.length; i++) {
+                d.targetLinks[i].color = d.targetLinks[i].defaultColor;
+            }
+            d3.selectAll(".sk-link").style("stroke", function(l) {
+                return l.color;
+            })
+            sankey(_dataSankey);
+            sankey.update(_dataSankey);
         })
     if (configSankey.tooltip.infoDiv)
         node.on('mousemove', tipNodes.move).on('mouseover', tipNodes.show).on('mouseout', tipNodes.hide);
@@ -723,6 +766,7 @@ sk.createSankey = function(containerId, configSankey, dataSankey) {
 
     return this;
 };
+
 sk.version = "0.2.0";
 })();
 //# sourceMappingURL=sk.d3.js.map
