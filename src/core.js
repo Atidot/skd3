@@ -24,7 +24,8 @@ sk.createSankey = function(containerId, configSankey, dataSankey, selectionCallb
             color: l.color,
             defaultColor: l.defaultColor,
             highlightColor: l.highlightColor,
-            value: _safeValueToLink(l.value)
+            value: _safeValueToLink(l.value),
+            over: l.over
         });
     });
 
@@ -62,10 +63,10 @@ sk.createSankey = function(containerId, configSankey, dataSankey, selectionCallb
         .attr('transform', "translate(" + configSankey.margin.left + "," + configSankey.margin.top + ")");
 
     var sankey = d3.sankey()
-        .nodeWidth(15)
-        .nodePadding(10)
+        .nodeWidth(11)
+        .nodePadding(5)
         .extent([
-            [0, 0],
+            [0, 20],
             [dimensions.width, dimensions.height]
         ]);
 
@@ -204,8 +205,8 @@ sk.createSankey = function(containerId, configSankey, dataSankey, selectionCallb
             })
     };
 
-    svg.call(tipLinks);
-    svg.call(tipNodes);
+    //svg.call(tipLinks);
+    //svg.call(tipNodes);
     var _stopTooltips = function() {
         if (tipLinks) tipLinks.hide();
         if (tipNodes) tipNodes.hide();
@@ -226,27 +227,45 @@ sk.createSankey = function(containerId, configSankey, dataSankey, selectionCallb
         .attr("class", "sk-link")
         .attr("d", path)
         .style("stroke", function(l) {
+            //console.log(l);
             return l.color;
         })
         .style("stroke-width", function(l) {
             return Math.max(1, l.width) + "px";
         })
         .on('mouseover', function(l) {
-            console.log(l.id);
+            //console.log(l);
+            l.over = true;
             selectionCallback(l.id);
+            l.color = l.source.color;
+            d3.selectAll(".sk-link").style("stroke", function(l) {
+                return l.color;
+            })
+            sankey(_dataSankey);
+            sankey.update(_dataSankey);
         })
         .on('mouseout', function(l) {
+            //console.log(l);
+            l.over = false;
             selectionCallback(null);
+            l.color = l.defaultColor;
+            d3.selectAll(".sk-link").style("stroke", function(l) {
+                return l.color;
+            })
+            sankey(_dataSankey);
+            sankey.update(_dataSankey);
+            sankey(_dataSankey);
+            sankey.update(_dataSankey);
         })
         .sort(function(a, b) {
             return b.width - a.width;
         });
-    if (configSankey.tooltip.infoDiv)
-        link.on('mousemove', tipLinks.move).on('mouseover', tipLinks.show).on('mouseout', tipLinks.hide);
-    else
-        link.append("title").text(function(d) {
-            return d.source.name + " -> " + d.target.name + "\n" + _formatValueTooltip(d.value);
-        });
+    //if (configSankey.tooltip.infoDiv)
+        //link.on('mousemove', tipLinks.move).on('mouseover', tipLinks.show).on('mouseout', tipLinks.hide);
+    //else
+        //link.append("title").text(function(d) {
+            //return d.source.name + " -> " + d.target.name + "\n" + _formatValueTooltip(d.value);
+        //});
 
     // the function for moving the nodes
     function _dragmove(d) {
@@ -275,15 +294,15 @@ sk.createSankey = function(containerId, configSankey, dataSankey, selectionCallb
             return "translate(" + d.x0 + "," + d.y0 + ")";
         })
         .on('mouseover', function(d) {
-            console.log(d);
-            console.log(d.id.toString());
+            //console.log(d);
+            //console.log(d.id.toString());
             selectionCallback(JSON.stringify(d.id));
             var i;
             for (i = 0; i < d.sourceLinks.length; i++) {
-                d.sourceLinks[i].color = d.sourceLinks[i].highlightColor;
+                d.sourceLinks[i].color = d.color;
             }
             for (i = 0; i < d.targetLinks.length; i++) {
-                d.targetLinks[i].color = d.targetLinks[i].highlightColor;
+                d.targetLinks[i].color = d.color;
             }
             d3.selectAll(".sk-link").style("stroke", function(l) {
                 return l.color;
@@ -292,7 +311,7 @@ sk.createSankey = function(containerId, configSankey, dataSankey, selectionCallb
             sankey.update(_dataSankey);
         })
         .on('mouseout', function(d) {
-            console.log(d);
+            //console.log(d);
             selectionCallback(null);
             var i;
             for (i = 0; i < d.sourceLinks.length; i++) {
@@ -307,12 +326,12 @@ sk.createSankey = function(containerId, configSankey, dataSankey, selectionCallb
             sankey(_dataSankey);
             sankey.update(_dataSankey);
         })
-    if (configSankey.tooltip.infoDiv)
-        node.on('mousemove', tipNodes.move).on('mouseover', tipNodes.show).on('mouseout', tipNodes.hide);
-    else
-        node.append("title").text(function(d) {
-            return d.name + "\n" + _formatValueTooltip(d.value);
-        });
+    //if (configSankey.tooltip.infoDiv)
+        //node.on('mousemove', tipNodes.move).on('mouseover', tipNodes.show).on('mouseout', tipNodes.hide);
+    //else
+        //node.append("title").text(function(d) {
+            //return d.name + "\n" + _formatValueTooltip(d.value);
+        //});
     //Drag nodes	
     if (_nodes_draggableX || _nodes_draggableY)
         node.call(d3.drag().subject(function(d) {
@@ -420,6 +439,14 @@ sk.createSankey = function(containerId, configSankey, dataSankey, selectionCallb
         }
         _updateLinksValues(_dataSankey);
     };
+
+    configSankey.titles.forEach(function(title, index, array) {
+        svg.append("text")
+            .attr("x", index * (dimensions.width / array.length) + title[1])
+            .attr("y", 0)
+            .attr("transform", "translate(0, 0)")
+            .text(function(d) { return title[0];});
+    });
 
     return this;
 };
